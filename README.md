@@ -24,11 +24,13 @@ data_values = self.row2.split(self.delimiter)"
 
 # Run
 ## Locally
+```
 python -m csv_to_bq --output_project <YOUR_PROJECT> \
                     --output_dataset  <YOUR_DATASET> \
                     --output_table  <YOUR_TABLE>
-
+```
 ## Dataflow
+```
 python -m csv_to_bq --runner DataflowRunner \
                     --project <your-gcp-project> \
                     --temp_location gs://<your-gcs-bucket>/tmp/
@@ -37,4 +39,4 @@ python -m csv_to_bq --runner DataflowRunner \
                     --output_dataset  <YOUR_DATASET> \
                     --output_table  <YOUR_TABLE> \
                     --input_file gs://<your-gcs-bucket>/<your-csv-file> \
-
+```
