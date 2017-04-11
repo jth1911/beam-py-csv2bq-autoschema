@@ -1,0 +1,3 @@
+name|place
+john|{"address":{"street":"123 street abc","apt":10},"extra":"take the stairs"}
+alice|{"address":{"street":"678 rue xyz","apt":20},"extra":"beach for all"}
