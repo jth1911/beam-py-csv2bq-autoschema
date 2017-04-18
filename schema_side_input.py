@@ -1,11 +1,12 @@
 import json
+import re
 from itertools import izip
 
 from apache_beam.io.gcp.internal.clients import bigquery
 
 class SchemaSideInput():
 
-    def __init__(self, row1, row2="", delimiter="|"):
+    def __init__(self, row1, row2="", delimiter=","):
         """ Creates a BigQuery schema based on the first 2 rows of the dataset:
         - if the schema is flat only the first row will matter but we'll have to parse the 2nd to make sure
         - if the schema is nested we'll discover it with the 2nd row by reading the values.
@@ -44,8 +45,8 @@ class SchemaSideInput():
             is_json = False
 
             if self.row2 != "":
-                data_values = self.row2.split(self.delimiter)
-                check_json = self._is_json(data_values[idx])
+                data_values = re.findall(r'(?:[^\s' + self.delimiter  + '"]|"(?:\\.|[^"])*"|(?<=,))+', self.row2)
+                check_json = self._is_json(data_values[idx].decode('string-escape').strip('"'))
                 if check_json:
                     # Update the schema type and mark the column as json
                     column_schema.type = 'record'
@@ -56,7 +57,6 @@ class SchemaSideInput():
 
                     # Appends
                     column_schema = nested_schema
-
             # Add the column name to the list and whether it is json or not
             self.json_columns.append({'name':cn, 'is_json':is_json})
 
@@ -83,7 +83,10 @@ class SchemaSideInput():
             False if not a json or the json object
         """
         try:
-            return json.loads(field)
+            js = json.loads(field)
+            if isinstance(js, dict):
+                return js
+            return False
         except ValueError:
             return False
 

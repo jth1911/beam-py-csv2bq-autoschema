@@ -18,9 +18,9 @@ from schema_side_input import SchemaSideInput
 class ConvertToTableRowFn(beam.DoFn):
   """Parses each line of input text into TableRows."""
 
-  def process(self, element, si_fields, delimiter="|"):
+  def process(self, element, si_fields, delimiter=","):
     """ Creates a json-like object with values matching column names. element
-    should have the same length as si_fields once split.
+    should have the same length as si_fields once split. The split ignores delimiters in the json (within a double quote)
     Args:
       element: row read from the text file
       si_fields: list of columns name and whether they have json content {str 'name', bool 'is_json'}
@@ -28,7 +28,7 @@ class ConvertToTableRowFn(beam.DoFn):
     Returns:
       Something similar to {'field_1':value_1, ..., field_n:value_n}
     """
-    values = element.split(delimiter)
+    values = re.findall(r'(?:[^\s' + delimiter  + '"]|"(?:\\.|[^"])*"|(?<=,))+', element)
     if len(values) != len(si_fields):
         raise ValueError(
             'Number of column fields does not match the number of cells in the row {}.'.format(element))
@@ -39,7 +39,7 @@ class ConvertToTableRowFn(beam.DoFn):
     for k, v in enumerate(values):
         column_meta = si_fields[k]
         if column_meta["is_json"]:
-            v = json.loads(v)
+            v = json.loads(v.decode('string-escape').strip('"'))
             #TODO Parse this json and make sure that arrays are converted to string
         tr[column_meta["name"]] = v
 
@@ -53,14 +53,12 @@ def run(argv=None):
   parser.add_argument('--runner', dest='runner', default='DirectRunner')
   parser.add_argument('--input_file', dest='input_file', default='csv_sample.csv')
   parser.add_argument('--input_schema', dest='input_schema', default='')
-  parser.add_argument('--input_delimiter', dest='input_delimiter', default='|')
-  parser.add_argument('--output_project', dest='output_project', default='<YOUR_PROJECT>')
-  parser.add_argument('--output_dataset', dest='output_dataset', default='<YOUR_DATASET>')
-  parser.add_argument('--output_table', dest='output_table', default='<YOUR_TABLE>')
+  parser.add_argument('--input_delimiter', dest='input_delimiter', default=',')
+  parser.add_argument('--output_project', dest='output_project', default='mam-cloud')
+  parser.add_argument('--output_dataset', dest='output_dataset', default='dummy')
+  parser.add_argument('--output_table', dest='output_table', default='df_from_csv')
   parser.add_argument('--cat_read', dest='cat_read', default='10000', help='Choose big enough to read at least 2 lines of the csv')
   parser.add_argument('--skip_row', dest='skip_row', default=1, help='We generally assume that the first row in the csv contains column names')
-  parser.add_argument('--staging_location', dest='staging_location', default='gs://<YOUR_DF_BUCKET>/staging')
-  parser.add_argument('--temp_location', dest='temp_location', default='gs://<YOUR_DF_BUCKET>/staging')
 
   known_args, pipeline_args = parser.parse_known_args(argv)
 
@@ -68,8 +66,8 @@ def run(argv=None):
   if known_args.runner == 'DataflowRunner':
     pipeline_args.extend([
         '--runner=DataflowRunner',
-        '--staging_location={}'.format(known_args.staging_location),
-        '--temp_location={}'.format(known_args.temp_location),
+        '--staging_location=gs://bq-connector-pii/staging',
+        '--temp_location=gs://bq-connector-pii/temp',
         '--job_name=csv2bq-{}'.format(str(datetime.datetime.now()).replace("-","").replace(".","").replace(":","").replace(" ","")),
     ])
 

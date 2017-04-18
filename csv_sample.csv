@@ -1,3 +1,2 @@
-name|place
-john|{"address":{"street":"123 street abc","apt":10},"extra":"take the stairs"}
-alice|{"address":{"street":"678 rue xyz","apt":20},"extra":"beach for all"}
+a,b,c
+00001c8e-b651-45d3-907d-63a5d60c6a6f,"{\"A1\":58,\"B1\":102}","{\"A2\":58,\"B2\":\"102\"}"
